@@ -142,17 +142,8 @@ scene.add(zombie);
 let mixer = null, walkAction = null;
 let heading = 0;
 const target = new THREE.Vector3();
-let hasTarget = false, mode = 'wander', idleT = 0;
-
-function pickWander() {
-  const [x, z] = freeSpot(1.5);
-  // stay reasonably close so the camera keeps up
-  const p = new THREE.Vector3(x, 0, z).sub(zombie.position).clampLength(0, 12).add(zombie.position);
-  p.x = THREE.MathUtils.clamp(p.x, -MAP, MAP);
-  p.z = THREE.MathUtils.clamp(p.z, -MAP, MAP);
-  target.copy(p);
-  hasTarget = true;
-}
+// The zombie only moves when the user clicks a spot or holds a movement key.
+let hasTarget = false, mode = 'idle';
 
 new GLTFLoader().load(
   MODEL_URL,
@@ -177,7 +168,6 @@ new GLTFLoader().load(
       console.log('animations:', gltf.animations.map((a) => a.name));
     }
     document.getElementById('loading').remove();
-    pickWander();
   },
   undefined,
   (err) => {
@@ -247,7 +237,6 @@ function tick() {
     dx = f.x * -kz + r.x * kx;
     dz = f.z * -kz + r.z * kx;
     mode = 'manual';
-    idleT = 3; // after releasing keys, stand for 3s before wandering again
     hasTarget = false;
     marker.visible = false;
   } else if (hasTarget) {
@@ -257,11 +246,9 @@ function tick() {
       hasTarget = false;
       marker.visible = false;
       mode = 'idle';
-      idleT = rand(1.5, 4);
     } else { dx = vx / d; dz = vz / d; }
-  } else if (mode === 'idle' || mode === 'manual') {
-    idleT -= dt;
-    if (idleT <= 0) { mode = 'wander'; pickWander(); }
+  } else {
+    mode = 'idle';
   }
 
   const moving = dx !== 0 || dz !== 0;
@@ -289,7 +276,7 @@ function tick() {
   moon.target.position.copy(zombie.position);
   controls.update();
 
-  stateEl.textContent = { wander: '배회', goto: '목표로 이동', idle: '멈춤', manual: '직접 조종' }[mode];
+  stateEl.textContent = { goto: '목표로 이동', idle: '대기', manual: '직접 조종' }[mode];
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
